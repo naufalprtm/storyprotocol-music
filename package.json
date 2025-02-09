@@ -4,8 +4,8 @@
   "description": "A music IP registration system using Story Protocol and IPFS.",
   "main": "dist/index.js",
   "scripts": {
-    "start": "ts-node src/index.ts",
-    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "build": "tsx",
     "lint": "prettier --check .",
     "format": "prettier --write ."
   },

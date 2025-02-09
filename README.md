@@ -26,19 +26,17 @@ music-ip-registration/
 │   │── services/
 │   │   ├── registerMusic.ts
 │   │── contracts/                   
-│   │   ├── Music.sol                  
-│   │── index.ts
+│   │   ├── Music.sol     
+│──  music/
+│   ├──Dawn.mp3
+│   ├── Dusk.mp3    
+│   ├── Yi.mp3
+│   ├── YiLongMa.mp3             
 │── logs/
 │   │── app.log
-│── music/
-│   │── Dawn.mp3
-│   │── Dusk.mp3    
-│   │── Yi.mp3
-│   │── YiLongMa.mp3
 │── test/                            
-│   │── Music.t.sol                      
-│── deploy/                            
-│   │── deployMusicNFT.ts              
+│   │── Music.t.sol    
+├── index.ts                              
 │── node_modules/
 │── package.json
 │── tsconfig.json
@@ -75,28 +73,68 @@ Set up your .env file with the necessary API keys and configurations.
 ```
  forge test -vvv
 ```
-#### Deploy the Smart Contract
-```
- forge create --rpc-url https://aeneid.storyrpc.io \
-    --private-key your_private_key_here \
-    src/contracts/MusicNFT.sol:MusicNFT
-```
 #### Run Forked Tests
 ```
  forge test --fork-url https://aeneid.storyrpc.io/ --match-path test/Music.t.sol -vvv
 ```
-#### Verify the Smart Contract
+#### Deploy the Smart Contract & Verify the Smart Contract
+Aeneid
 ```
- forge create \
-  --rpc-url https://aeneid.storyrpc.io/ \
-  --private-key $PRIVATE_KEY \
-  ./src/Example.sol:Example \
-  --verify \
+forge create --broadcast --verify \
   --verifier blockscout \
   --verifier-url https://aeneid.storyscan.xyz/api/ \
-  --constructor-args 0x0 0x0 0x0 0x0 0x0
+  --rpc-url https://aeneid.storyrpc.io/ \
+  --private-key your_private_key_here \
+  ./src/contracts/Music.sol:Music \
+  --constructor-args \
+  Music MUSIC \
+  0x77319B4031e6eF1250907aa00018B8B1c67a244b \
+  0x529a750E02d8E2f15649c13D69a465286a780e24 \
+  0x04fbd8a2e56dd85CFD5500A4A4DfA955B9f1dE6f \
+  0x2E896b0b2Fdb7457499B56AAaA4AE55BCB4Cd316 \
+  0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E \
+  0xF2104833d386a2734a4eB3B8ad6FC6812F29E38E \
+  0xFe3838BFb30B34170F00030B52eA4893d8aAC6bC \
+  0x9515faE61E0c0447C6AC6dEe5628A2097aFE1890 
 ```
 
+LocalTest
+```
+forge create --broadcast \
+  --rpc-url http://127.0.0.1:8545/ \
+  --private-key your_private_key_here \
+  ./src/contracts/Music.sol:Music \
+  --constructor-args \
+  Music MUSIC \
+  0x77319B4031e6eF1250907aa00018B8B1c67a244b \
+  0x529a750E02d8E2f15649c13D69a465286a780e24 \
+  0x04fbd8a2e56dd85CFD5500A4A4DfA955B9f1dE6f \
+  0x2E896b0b2Fdb7457499B56AAaA4AE55BCB4Cd316 \
+  0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E \
+  0xF2104833d386a2734a4eB3B8ad6FC6812F29E38E \
+  0xFe3838BFb30B34170F00030B52eA4893d8aAC6bC \
+  0x9515faE61E0c0447C6AC6dEe5628A2097aFE1890 
+```
+#### Test Register
+```
+npx tsx index.ts
+```
+
+#### Addresses from Story Protocol deployment
+Official Docs `docs.story.foundation` [Deployed Smart Contracts](https://docs.story.foundation/docs/deployed-smart-contracts)
+
+```
+IPAssetRegistry internal IP_ASSET_REGISTRY = IPAssetRegistry(0x77319B4031e6eF1250907aa00018B8B1c67a244b); // Protocol Core - IPAssetRegistry
+LicenseRegistry internal LICENSE_REGISTRY = LicenseRegistry(0x529a750E02d8E2f15649c13D69a465286a780e24); // Protocol Core - LicenseRegistry
+LicensingModule internal LICENSING_MODULE = LicensingModule(0x04fbd8a2e56dd85CFD5500A4A4DfA955B9f1dE6f); // Protocol Core - LicensingModule
+PILicenseTemplate internal PIL_TEMPLATE = PILicenseTemplate(0x2E896b0b2Fdb7457499B56AAaA4AE55BCB4Cd316); // Protocol Core - PILicenseTemplate
+RoyaltyPolicyLAP internal ROYALTY_POLICY_LAP = RoyaltyPolicyLAP(0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E); // Protocol Core - RoyaltyPolicyLAP
+LicenseToken internal LICENSE_TOKEN = LicenseToken(0xFe3838BFb30B34170F00030B52eA4893d8aAC6bC); // Protocol Core - LicenseToken
+RegistrationWorkflows internal REGISTRATION_WORKFLOWS = RegistrationWorkflows(0xbe39E1C756e921BD25DF86e7AAa31106d1eb0424); // Protocol Periphery 
+RoyaltyModule internal ROYALTY_MODULE = RoyaltyModule(0xD2f60c40fEbccf6311f8B47c4f2Ec6b040400086); // Protocol Core - RoyaltyModule
+RoyaltyWorkflows internal ROYALTY_WORKFLOWS = RoyaltyWorkflows(0x9515faE61E0c0447C6AC6dEe5628A2097aFE1890); // ProtocolPeripheryRoyaltyWorkflows
+MockERC20 internal MERC20 = MockERC20(0xF2104833d386a2734a4eB3B8ad6FC6812F29E38E); // Mock - MERC20
+```
 ## 🎼 Music Source  
 The music files in this project were generated using [Suno](https://suno.com).  
 

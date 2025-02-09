@@ -14,7 +14,7 @@ export const account: Account = privateKeyToAccount(formattedPrivateKey as `0x${
 const storyConfig: StoryConfig = {
     account: account,
     transport: http(config.rpcProviderUrl),
-    chainId: config.chainId as "aeneid", 
+    chainId: 'aeneid',
 };
 
 export const createStoryClient = async () => {

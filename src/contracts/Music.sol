@@ -1,5 +1,4 @@
 // Music.sol
-
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
@@ -49,9 +48,9 @@ contract Music is ERC721, Ownable {
         licenseToken = LicenseToken(_licenseToken);
         royaltyWorkflows = RoyaltyWorkflows(_royaltyWorkflows);
     }
-function getNextTokenId() public view returns (uint256) {
+   function getNextTokenId() public view returns (uint256) {
     return nextTokenId;
-}
+   }
     function mint(address to) public onlyOwner returns (uint256) {
         uint256 tokenId = nextTokenId++;
         _mint(to, tokenId);

@@ -5,20 +5,25 @@ import { MusicMetadata, NFTMetadata } from "../models/metadata";
 import { config } from "../config/env";
 import logger from "../utils/logger";
 import fs from "fs";
-import { toHex } from "viem";
+import { keccak256, toHex } from "viem";
+import path from "path";
 
 const storyClient = createStoryClient();
 
 const uploadMusicToIPFS = async (musicFilePath: string) => {
     try {
-        if (!fs.existsSync(musicFilePath)) {
-            throw new Error(`Music file not found: ${musicFilePath}`);
+        const resolvedPath = path.resolve(process.cwd(), musicFilePath);
+        console.log("🎵 Music file path from .env:", process.env.MUSIC_FILE_PATH);
+        console.log("📂 Checking music file at:", resolvedPath);
+
+        if (!fs.existsSync(resolvedPath)) {
+            throw new Error(`Music file not found: ${resolvedPath}`);
         }
 
-        const musicIpfsHash = await uploadToIPFS(musicFilePath, true);
-        return `https://ipfs.io/ipfs/${musicIpfsHash}`;
+        const musicIpfsHash = await uploadToIPFS(resolvedPath, true);
+        return `https://gateway.pinata.cloud/ipfs/${musicIpfsHash}`;
     } catch (error) {
-        logger.error("❌ Failed to upload music to IPFS:", error);
+        logger.error("❌ Failed to upload music to IPFS via Pinata:", error);
         throw error;
     }
 };
@@ -32,10 +37,10 @@ const registerMusicOnBlockchain = async (ipMetadata: MusicMetadata, tokenId: str
             nftContract: config.nftContractAddress,
             tokenId: tokenId,
             ipMetadata: {
-                ipMetadataURI: `https://ipfs.io/ipfs/${ipfsHash}`,
-                ipMetadataHash: toHex(ipfsHash, { size: 32 }), 
-                nftMetadataHash: toHex(ipfsHash, { size: 32 }),
-                nftMetadataURI: `https://ipfs.io/ipfs/${ipfsHash}`,
+                ipMetadataURI: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+                ipMetadataHash: keccak256(toHex(ipfsHash)), 
+                nftMetadataHash:  keccak256(toHex(ipfsHash)), 
+                nftMetadataURI: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
             },
             txOptions: { waitForTransaction: true },
         });
@@ -98,7 +103,7 @@ export const registerMusic = async (musicFilePath: string, metadata: MusicMetada
         };
 
         const nftIpfsHash = await uploadToIPFS(nftMetadata);
-        logger.info(`✅ NFT metadata successfully uploaded to IPFS: ${nftIpfsHash}`);
+        logger.info(`✅ NFT metadata successfully uploaded to IPFS via Pinata: ${nftIpfsHash}`);
 
         return { txHash, nftIpfsHash };
     } catch (error) {

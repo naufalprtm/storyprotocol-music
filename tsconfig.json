@@ -16,7 +16,7 @@
       "isolatedModules": true,
       "skipLibCheck": true
     },
-    "include": ["src"],
+    "include": ["src", "index.ts", "music"],
     "exclude": ["node_modules", "dist"]
   }
   

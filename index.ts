@@ -1,16 +1,24 @@
 // src/index.ts
-import { registerMusic } from "./services/registerMusic";
-import { MusicMetadata } from "./models/metadata";
-import { config } from "./config/env";
-import logger from "./utils/logger";
+import { registerMusic } from "./src/services/registerMusic";
+import { MusicMetadata } from "./src/models/metadata";
+import { config } from "./src/config/env";
+import logger from "./src/utils/logger";
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config();
 
-const musicFilePath = process.env.MUSIC_FILE_PATH || "";
+let musicFilePath = process.env.MUSIC_FILE_PATH;
 
 if (!musicFilePath) {
     logger.error("❌ Error: MUSIC_FILE_PATH is not set in .env");
     process.exit(1);
 }
+if (!path.isAbsolute(musicFilePath)) {
+    const basePath = process.cwd();
+    musicFilePath = path.join(basePath, musicFilePath);
+}
 
+logger.info(`📂 Final music file path: ${musicFilePath}`);
 const musicMetadata: MusicMetadata = {
     title: "Midnight Marriage",
     description: "This is a house-style song generated on Suno.",
