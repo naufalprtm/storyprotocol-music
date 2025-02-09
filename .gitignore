@@ -24,3 +24,10 @@ yarn-error.log
 pnpm-lock.yaml
 yalc.lock
 package-lock.json
+out
+forge-cache
+lib
+.yalc
+pnpm-lock.yaml
+yalc.lock
+yarn.lock
