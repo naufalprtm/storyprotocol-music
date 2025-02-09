@@ -31,3 +31,4 @@ lib
 pnpm-lock.yaml
 yalc.lock
 yarn.lock
+logs
