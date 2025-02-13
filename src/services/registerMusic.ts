@@ -1,113 +1,148 @@
 // src/services/registerMusic.ts
-import { createStoryClient } from "../config/storyClient";
+import { createStoryClient, walletClient, publicClient } from "../config/storyClient";
 import { uploadToIPFS } from "../utils/ipfs";
 import { MusicMetadata, NFTMetadata } from "../models/metadata";
 import { config } from "../config/env";
 import logger from "../utils/logger";
 import fs from "fs";
-import { keccak256, toHex } from "viem";
 import path from "path";
+import { createHash } from "crypto";
+import { IpMetadata } from "@story-protocol/core-sdk";
+import MusicContract from "../../out/Music.sol/Music.json";
+import { ethers } from "ethers";
 
 const storyClient = createStoryClient();
+const provider = new ethers.JsonRpcProvider(config.rpcProviderUrl);
+const wallet = new ethers.Wallet(config.privateKey, provider);
+const musicContract = new ethers.Contract(config.nftContractAddress, MusicContract.abi, wallet);
 
-const uploadMusicToIPFS = async (musicFilePath: string) => {
+export const uploadMusicToIPFS = async (musicFilePath: string) => {
     try {
-        const resolvedPath = path.resolve(process.cwd(), musicFilePath);
-        console.log("🎵 Music file path from .env:", process.env.MUSIC_FILE_PATH);
-        console.log("📂 Checking music file at:", resolvedPath);
+        if (!fs.existsSync(musicFilePath)) throw new Error(`Music file not found: ${musicFilePath}`);
 
-        if (!fs.existsSync(resolvedPath)) {
-            throw new Error(`Music file not found: ${resolvedPath}`);
-        }
-
-        const musicIpfsHash = await uploadToIPFS(resolvedPath, true);
+        const musicIpfsHash = await uploadToIPFS(musicFilePath, true);
         return `https://gateway.pinata.cloud/ipfs/${musicIpfsHash}`;
     } catch (error) {
-        logger.error("❌ Failed to upload music to IPFS via Pinata:", error);
+        logger.error("❌ Failed to upload music to IPFS:", error);
         throw error;
     }
 };
 
-const registerMusicOnBlockchain = async (ipMetadata: MusicMetadata, tokenId: string) => {
+const mintTest = async (recipient) => {
     try {
-        const ipfsHash = await uploadToIPFS(ipMetadata);
-        const client = await storyClient;
+        console.log("Minting NFT to:", recipient);
+        const contract = new ethers.Contract(musicContract, MusicContract.abi, wallet);
+        const tx = await contract.mint(recipient);
+        const receipt = await tx.wait();
+        console.log("✅ NFT Minted! Transaction Hash:", receipt.hash);
+    } catch (error) {
+        console.error("❌ Minting failed:", error);
+    }
+};
+const recipientAddress = process.env.ARTIST_ADDRESS;
+mintTest(recipientAddress);
+
+export const mintMusicNFT = async (
+    title,
+    description,
+    attributes,
+    artist,
+    genre,
+    ipfsHash,
+    licenseFee,
+    metadataURI
+) => {
+    try {
+        console.log(`📝 Minting NFT for ${title}...`);
+        
+        const provider = new ethers.JsonRpcProvider("https://aeneid.storyrpc.io/");
+        const wallet = new ethers.Wallet(config.privateKey, provider);
+        const contract = new ethers.Contract(config.nftContractAddress, MusicContract.abi, wallet);
+
+        const client = await createStoryClient();
+        const ipMetadata = client.ipAsset.generateIpMetadata({
+            title, 
+            genre,
+            ipfsHash,
+            licenseFee,
+            metadataURI,
+            creators: [{ name: artist, address: config.artistAddress, contributionPercent: 100 }],
+        });
+
+        const nftMetadata = {
+            name: `NFT representing ${title}`,
+            description: `This NFT represents ownership of ${title}`,
+            image: config.defaultImageUrl,
+            attributes,
+            media: [
+                {
+                  name: config.artistName,
+                  url: 'https://amaranth-worried-thrush-99.mypinata.cloud/ipfs/bafybeihxhagfqe2rqwqtakkkuyl4ycssv45azm2lfsz3wczbg66xneq3hu',
+                  mimeType: 'audio/mpeg',
+                },
+              ],
+        };
+
+        const ipIpfsHash = await uploadToIPFS(ipMetadata);
+        const ipHash = createHash("sha256").update(JSON.stringify(ipMetadata)).digest("hex");
+        const nftIpfsHash = await uploadToIPFS(nftMetadata);
+        const nftHash = createHash("sha256").update(JSON.stringify(nftMetadata)).digest("hex");
+
+        console.log(`💾 IPFS hashes: ${ipIpfsHash}, ${nftIpfsHash}`);
+
+        const tx = await contract.mintMusicNFT(
+            title, 
+            description,
+            artist, 
+            genre, 
+            ipfsHash, 
+            licenseFee, 
+            `https://ipfs.io/ipfs/${nftIpfsHash}`
+        );
+        
+        const receipt = await tx.wait();
+        
+        const tokenId = receipt.logs[0]?.topics[3];
+        console.log(`✅ NFT minted with tokenId ${tokenId}`);
 
         const response = await client.ipAsset.register({
             nftContract: config.nftContractAddress,
-            tokenId: tokenId,
+            tokenId,
             ipMetadata: {
-                ipMetadataURI: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
-                ipMetadataHash: keccak256(toHex(ipfsHash)), 
-                nftMetadataHash:  keccak256(toHex(ipfsHash)), 
-                nftMetadataURI: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+                ipMetadataURI: `https://ipfs.io/ipfs/${ipIpfsHash}`,
+                ipMetadataHash: `0x${ipHash}`,
+                nftMetadataURI: `https://ipfs.io/ipfs/${nftIpfsHash}`,
+                nftMetadataHash: `0x${nftHash}`,
             },
             txOptions: { waitForTransaction: true },
         });
 
-        if (!response.txHash) {
-            throw new Error("Transaction hash not found. NFT might already be registered.");
-        }
-
-        logger.info(`✅ Music registered on blockchain at transaction hash: ${response.txHash}`);
-        return { txHash: response.txHash, ipfsHash };
+        console.log(`✅ Registered with Story Protocol, IPA ID: ${response.ipId}`);
+        return { tokenId, txHash: response.txHash, ipId: response.ipId };
     } catch (error) {
-        logger.error("❌ Failed to register music on blockchain:", error);
+        console.error("❌ Error minting NFT:", error);
         throw error;
     }
 };
 
-export const registerMusic = async (musicFilePath: string, metadata: MusicMetadata) => {
+export const registerAsIPAsset = async (tokenId) => {
     try {
-        if (!config.privateKey) {
-            throw new Error("PRIVATE_KEY is not set in .env");
-        }
+        console.log(`🔹 Registering tokenId ${tokenId} as IP asset...`);
 
-        const musicUrl = await uploadMusicToIPFS(musicFilePath);
+        const provider = new ethers.JsonRpcProvider(config.rpcProviderUrl);
+        const wallet = new ethers.Wallet(config.privateKey, provider);
+        const contract = new ethers.Contract(config.nftContractAddress, MusicContract.abi, wallet);
 
-        const ipMetadata: MusicMetadata = {
-            ...metadata,
-            ipType: "Music",
-            media: [
-                {
-                    name: metadata.title,
-                    url: musicUrl,
-                    mimeType: "audio/mpeg",
-                },
-            ],
-            creators: [
-                {
-                    name: config.artistName,
-                    address: config.artistAddress,
-                    contributionPercent: 100,
-                },
-            ],
-        };
+        const tx = await contract.registerAsIPAsset(tokenId);
+        const receipt = await tx.wait();
 
-        const tokenId = "1";
+        const event = receipt.logs.find(log => log.address.toLowerCase() === config.nftContractAddress.toLowerCase());
+        const ipId = event ? event.topics[1] : null;
 
-        const { txHash, ipfsHash } = await registerMusicOnBlockchain(ipMetadata, tokenId);
-
-        const nftMetadata: NFTMetadata = {
-            name: metadata.title,
-            description: `This NFT represents ownership of the song ${metadata.title}.`,
-            image: metadata.media?.[0]?.url || config.defaultImageUrl,
-            media: [
-                {
-                    name: metadata.title,
-                    url: musicUrl,
-                    mimeType: "audio/mpeg",
-                },
-            ],
-            attributes: metadata.attributes,
-        };
-
-        const nftIpfsHash = await uploadToIPFS(nftMetadata);
-        logger.info(`✅ NFT metadata successfully uploaded to IPFS via Pinata: ${nftIpfsHash}`);
-
-        return { txHash, nftIpfsHash };
+        console.log(`✅ Successfully registered tokenId ${tokenId} as IP asset. IP ID: ${ipId}`);
+        return { tokenId, ipId, txHash: receipt.transactionHash };
     } catch (error) {
-        logger.error("❌ Registration process failed:", error);
+        console.error("❌ Error registering IP asset:", error);
         throw error;
     }
 };

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
+import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { IPAssetRegistry } from "@storyprotocol/core/registries/IPAssetRegistry.sol";
@@ -13,8 +14,10 @@ import { RoyaltyPolicyLAP } from "@storyprotocol/core/modules/royalty/policies/L
 import { MockERC20 } from "@storyprotocol/test/mocks/token/MockERC20.sol";
 import { LicenseToken } from "@storyprotocol/core/LicenseToken.sol";
 import { RoyaltyWorkflows } from "@storyprotocol/periphery/workflows/RoyaltyWorkflows.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract Music is ERC721, Ownable {
+contract Music is ERC721, ERC721URIStorage, Ownable, AccessControl {
+
     uint256 public nextTokenId;
     IPAssetRegistry public ipAssetRegistry;
     LicenseRegistry public licenseRegistry;
@@ -24,8 +27,33 @@ contract Music is ERC721, Ownable {
     MockERC20 public mockERC20;
     LicenseToken public licenseToken;
     RoyaltyWorkflows public royaltyWorkflows;
+    
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     mapping(uint256 => address) public ipIds;
+    mapping(uint256 => MusicData) public musicRegistry;
+    mapping(uint256 => address) public royaltiesRecipient;
+    
+    struct MusicData {
+        string title;
+        string description;
+        string artist;
+        string genre;
+        string ipfsHash;
+        uint256 licenseFee;
+        string metadataURI;
+    }
+
+event MusicRegistered(
+
+    string title,
+    string artist,
+    string description,
+    string genre,
+    string ipfsHash,
+    uint256 licenseFee,
+    string metadataURI
+);
 
     constructor(
         string memory name,
@@ -38,7 +66,8 @@ contract Music is ERC721, Ownable {
         address _mockERC20,
         address _licenseToken,
         address _royaltyWorkflows
-    ) ERC721(name, symbol) Ownable(msg.sender) {
+    ) ERC721(name, symbol) ERC721URIStorage() Ownable(msg.sender) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         ipAssetRegistry = IPAssetRegistry(_ipAssetRegistry);
         licenseRegistry = LicenseRegistry(_licenseRegistry);
         licensingModule = LicensingModule(_licensingModule);
@@ -48,14 +77,59 @@ contract Music is ERC721, Ownable {
         licenseToken = LicenseToken(_licenseToken);
         royaltyWorkflows = RoyaltyWorkflows(_royaltyWorkflows);
     }
-   function getNextTokenId() public view returns (uint256) {
-    return nextTokenId;
-   }
-    function mint(address to) public onlyOwner returns (uint256) {
+
+    function grantRole(bytes32 role, address account) public override {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not admin");
+        _grantRole(role, account);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
+    function getNextTokenId() public view returns (uint256) {
+        return nextTokenId;
+    }
+
+   function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    return super.tokenURI(tokenId);
+    }
+
+    function mint(address to) public onlyRole(MINTER_ROLE) returns (uint256) {
         uint256 tokenId = nextTokenId++;
         _mint(to, tokenId);
         return tokenId;
     }
+
+    function grantMinterRole(address account) public onlyOwner {
+        _grantRole(MINTER_ROLE, account);
+    }
+
+    function revokeMinterRole(address account) public onlyOwner {
+        _revokeRole(MINTER_ROLE, account);
+    }
+
+function mintMusicNFT(
+    string memory title,
+    string memory description,
+    string memory artist,
+    string memory genre,
+    string memory ipfsHash,
+    uint256 licenseFee,
+    string memory metadataURI
+) public returns (uint256) {
+    uint256 newTokenId = nextTokenId++;
+
+    _mint(msg.sender, newTokenId);
+    _setTokenURI(newTokenId, metadataURI);
+
+        musicRegistry[newTokenId] = MusicData(title, description, artist, genre, ipfsHash, licenseFee, metadataURI);
+        royaltiesRecipient[newTokenId] = msg.sender;
+
+        emit MusicRegistered(newTokenId, title, description, artist, genre, ipfsHash, licenseFee, metadataURI);
+        return newTokenId;
+    }
+
 
     function registerAsIPAsset(uint256 tokenId) public returns (address ipId) {
         require(ownerOf(tokenId) == msg.sender, "Caller is not the owner");

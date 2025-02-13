@@ -2,21 +2,26 @@
 export interface MusicMetadata {
     title: string;
     description: string;
-    ipType: string;
+    ipType: string; 
+    artist: string;  
+    genre: string;   
+    ipfsHash: string;  
+    licenseFee: number;  
+    metadataURI: string;  
     media: {
         name: string;
         url: string;
         mimeType: string;
-    }[];
+    }[];  
     attributes: {
         key: string;
         value: string;
-    }[];
+    }[];  
     creators: {
         name: string;
         address: string;
         contributionPercent: number;
-    }[];
+    }[];  
 }
 
 export interface NFTMetadata {
@@ -27,9 +32,9 @@ export interface NFTMetadata {
         name: string;
         url: string;
         mimeType: string;
-    }[];
+    }[];  
     attributes: {
         key: string;
         value: string;
-    }[];
+    }[]; 
 }
