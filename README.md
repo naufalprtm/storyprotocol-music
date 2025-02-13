@@ -119,6 +119,74 @@ forge create --broadcast \
 ```
 npx tsx index.ts
 ```
+## 🎵 Smart Contract Interactions
+
+### Mint Music NFT (mintMusicNFT)
+```
+cast send --rpc-url https://aeneid.storyrpc.io/ --private-key your_private_key_here \
+    your_contract_here \
+    "mintMusicNFT(string,string,string,string,uint256,string)" \
+    "Sample Title" "Sample Artist" "Pop" "QmSampleIPFSHash" 100000000000000000 "https://ipfs.io/ipfs/Qasdsadas_or_dasdasdasd_(hash) from pinata"
+```
+
+### Register IP Asset (registerAsIPAsset)
+```
+cast send --rpc-url https://aeneid.storyrpc.io/ --private-key your_private_key_here \
+    your_contract_here \
+    "registerAsIPAsset(uint256)" 2
+```
+
+### Register License Terms (registerLicenseTerms)
+```
+cast send --rpc-url https://aeneid.storyrpc.io/ --private-key your_private_key_here \
+    your_contract_here \
+    "registerLicenseTerms()"
+```
+
+### Attach License Terms (attachLicenseTerms)
+```
+cast send --rpc-url https://aeneid.storyrpc.io/ --private-key your_private_key_here \
+    your_contract_here \
+    "attachLicenseTerms(uint256,uint256)" 1 1
+```
+
+### Mint License Token (mintLicenseToken)
+```
+cast send --rpc-url https://aeneid.storyrpc.io/ --private-key your_private_key_here \
+    your_contract_here \
+    "mintLicenseToken(uint256,uint256,uint256,address)" 1 1 1000000000000000000 your_wallet_here
+```
+
+### Claim Royalty (claimRoyalty)
+```
+cast send --rpc-url https://aeneid.storyrpc.io/ --private-key your_private_key_here \
+    your_contract_here \
+    "claimRoyalty(uint256,uint256)" 1 2
+```
+
+### Grant Role (manual casting)
+```
+cast send --rpc-url https://aeneid.storyrpc.io/ --private-key your_private_key_here \
+    your_contract_here \
+    "grantRole(bytes32,address)" \
+    "0x0000000000000000000000000000000000000000000000000000000000000000" \
+    your_wallet_here
+```
+check MINTER ROLE
+```
+cast keccak "MINTER_ROLE"
+```
+
+## 🔄 Reset and Reinstall
+```
+rm -rf node_modules package-lock.json dist .turbo
+npm cache clean --force / yarn cache clean
+npm install / yarn install
+
+npx tsc --build --force
+npx ts-node index.ts
+npx tsx index.ts
+```
 
 #### Addresses from Story Protocol deployment
 Official Docs `docs.story.foundation` [Deployed Smart Contracts](https://docs.story.foundation/docs/deployed-smart-contracts)
